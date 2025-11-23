@@ -1,11 +1,142 @@
 import pygame
 from pygame.locals import *
+from collections import Counter
 
 WORLD_WIDTH = 5200
 SCREEN_HEIGHT = 720
 
+ATTRIBUTES = {"containment_vault":{"volatile":["instability",
+                                                "reaction_time", 
+                                                "safe_distance",
+                                                "containment_pressure"
+                                                ],
+                                    "hazardous":["toxicity",
+                                                "corrosiveness",
+                                                "biohazard_rating",
+                                                "odor_strength"],
+                                    "sentient":["awareness_level",
+                                                "communication_style",
+                                                "response_latency",
+                                                "mood_index",
+                                                "cognitive_mass"],
+                                    "parasitic":["host_type",
+                                                "drain_rate",
+                                                "reproduction_time",
+                                                "nutrient_requirements"],
+                                    "temporal_distortion":["time_dilation",
+                                                            "loop_duration",
+                                                            "chronological_offset",
+                                                            "echo_mass"],
+                                    "gravitational_anomaly":["microgravity_field",
+                                                            "presumed_density",
+                                                            "pull_strength",
+                                                            "spatial_warp_degree"]
+                                    },
+            "documentation_cubicle":{"bureaucratic":["redundancy_index",
+                                                    "approval_delay",
+                                                    "stamp_count",
+                                                    "filing_temperature"],
+                                    "linguistic":["language_complexity",
+                                                "language_origin",
+                                                "speaker_number",
+                                                "readability"],
+                                    "archival":["age",
+                                                "catalog_number",
+                                                "fragility",
+                                                "preservation_priority"],
+                                    "mnemonic":["recall_difficulty",
+                                                "emotional_load",
+                                                "memory_resonance",
+                                                "cognitive_load"],
+                                    "prophetic":["accuracy_rate",
+                                                "timeline_divergence",
+                                                "prediction_window",
+                                                "message_clarity",
+                                                ],
+                                    "instructional":["instructional_clarity",
+                                                    "compliance_rate",
+                                                    "warning_level",
+                                                    "user_steps",
+                                                    "diagram_quality"
+                                                    ]
+                                    },
+            "recycler":{"metallic":["element_purity",
+                                    "conductivity",
+                                    "melting_point",
+                                    "tensile_strength"
+                                    ],
+                        "organic":["humidity",
+                                    "biomass",
+                                    "pH",
+                                    "state_of_decomposition"
+                                    ],
+                        "synthetic":["polymer_type",
+                                    "rigidity",
+                                    "thermal_resistance",
+                                    "color_index"],
+                        "biodegradable":["breakdown_time",
+                                        "microbial_affinity",
+                                        "compost_value",
+                                        "moisture_content"],
+                        "recyclable":["energy_yield",
+                                    "refraction_index",
+                                    "crystallinity",
+                                    ]
+                        },
+            "dimensional_export_tube":{"phase_fluid":["viscosity",
+                                                    "transparency",
+                                                    "shift_rate",
+                                                    "interphase_temperature",
+                                                    "phases"
+                                                    ],
+                                    "extradimensional":["dimension_origin",
+                                                        "anchor_mass",
+                                                        "arrival_form",
+                                                        "quantum_lag",
+                                                        "origin_layer"
+                                                        ],
+                                    "nonlocal":["coordinates",
+                                                "displacement_interval",
+                                                "tether_length",
+                                                "locality_score"
+                                                ],
+                                    "spectral":["luminosity",
+                                                "opacity",
+                                                "flicker_rate",
+                                                "hue_instability"],
+                                    "dreamlike":["loss_of_self",
+                                                "logic_strength",
+                                                "imagery_strength",
+                                                "lucidity"],
+                                    },
+            "lost_and_found":{"misplaced":["owner_id",
+                                            "last_known_location",
+                                            "dust_level",
+                                            "retrieval_probability"],
+                                "mundane":["weight",
+                                            "wear_level",
+                                            "usefulness",
+                                            "expiry_date"],
+                                "personal":["sentimental_value",
+                                            "pocket_fit",
+                                            "perfume_strength",
+                                            "usage_frequency"],
+                                "damaged":["crack_length",
+                                            "repairability",
+                                            "rust_index",
+                                            "remaining_functionality"],
+                                "unidentified":["entry_timestamp",
+                                                "preliminary_value",
+                                                "detection_confidence",
+                                                "mystery_index"],
+                                "nostalgic":["memory_strength",
+                                            "era",
+                                            "resonance"]
+                                }
+            }
+
 class Object(pygame.sprite.Sprite):
-    def __init__(self, name, desc, image, spd, tags, analysis_data, integrity = 100, instability = 0, mass = 1, value = 1):
+    def __init__(self, name, desc, image, spd, tags, analysis_data, station_num = 1, value = 1):
         super().__init__()
         self.name = name
         self.desc = desc
@@ -14,17 +145,31 @@ class Object(pygame.sprite.Sprite):
         self.spd = spd
         self.state = "onConveyor"
         self.tags = tags
-        self.instability = instability
-        self.integrity = integrity
-        self.mass = mass
         self.analysis_data = analysis_data
         self.value = value
+        self.station_num = station_num
+        self.station = self.correct_destination(self.analysis_data, ATTRIBUTES, self.station_num)
     def update(self, frame):
         if self.state == "onConveyor":
             if frame % 2 == 0:
                 self.rect.x += self.spd
         if self.rect.centerx >= 1100 and not self.state == "analysis_complete":
             self.state = "analysis"
+    @staticmethod
+    def correct_destination(analysis_data, ATTRIBUTES, station_num):
+        factor_list = []
+        station_list = []
+        for factor in analysis_data:
+            for station, properties in ATTRIBUTES:
+                for property in properties:
+                    if factor in properties[property]:
+                        factor_list.append(station)
+        station_counts = Counter(factor_list)
+        for i in range(station_num):
+            station_list.append(station_counts[list(station_counts.keys())[i]])
+        return station_list
+
+        
 
 class Decoration(pygame.sprite.Sprite):
     def __init__(self, image, x_pos, y_pos, spd, lim):
