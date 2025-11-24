@@ -153,14 +153,14 @@ class Object(pygame.sprite.Sprite):
         if self.state == "onConveyor":
             if frame % 2 == 0:
                 self.rect.x += self.spd
-        if self.rect.centerx >= 1100 and not self.state == "analysis_complete":
+        if self.rect.centerx >= 1100 and self.state == "onConveyor":
             self.state = "analysis"
     @staticmethod
     def correct_destination(analysis_data, ATTRIBUTES, station_num):
         factor_list = []
         station_list = []
         for factor in analysis_data:
-            for station, properties in ATTRIBUTES:
+            for station, properties in ATTRIBUTES.items():
                 for property in properties:
                     if factor in properties[property]:
                         factor_list.append(station)
@@ -224,20 +224,29 @@ class Station(pygame.sprite.Sprite):
         title_lines = Station.render_text_wrapped(obj.name, title_font, (255,255,255), 400)
         desc_lines  = Station.render_text_wrapped(obj.desc,  font, (255,255,255), 400)
         analysis_lines = []
+        analysis_rends = []
         for key, value in obj.analysis_data.items():
             line = f"{key.capitalize()}: {value}"
             analysis_lines.append(line)
-        analysis_rends = [font.render(line, True, (255,255,255)) for line in analysis_lines]
-
+        for line in analysis_lines:
+            analysis_rends += Station.render_text_wrapped(line,  font, (255,255,255), 400)
+        
         analyzer_rends = title_lines + desc_lines + analysis_rends
 
         # Build rects with spacing
         analyzer_rects = []
-        base_y = analyzer_popup.rect.centery + 100
+
+        line_spacing = 19
+        total_lines = len(analyzer_rends)
+        total_height = total_lines * line_spacing
+
+        # Center the entire block around analyzer_popup.rect.centery
+        start_y = analyzer_popup.rect.centery - (total_height // 2) + 150
+
         for i, rend in enumerate(analyzer_rends):
             rect = rend.get_rect(center=(
                 analyzer_popup.rect.centerx,
-                base_y + i * 18
+                start_y + i * line_spacing
             ))
             analyzer_rects.append(rect)
 
@@ -265,3 +274,18 @@ class Station(pygame.sprite.Sprite):
         # Turn lines into Surfaces
         rendered_lines = [font.render(line, True, color) for line in lines]
         return rendered_lines
+
+class Resource():
+    def __init__(self, type, amount, x_pos):
+            self.type = type
+            self.amount = amount
+            self.x_pos = x_pos
+            self.current_amount = amount
+    def update(self, current_amount):
+            self.current_amount = min(self.amount, current_amount)
+    def display(self, font):
+            line = f"{self.type.capitalize()}: {self.current_amount}"
+            line_surface = font.render(line, True, (255, 255, 255))
+            line_rect = line_surface.get_rect(topleft = (self.x_pos+5, 5))
+            return line_surface, line_rect
+

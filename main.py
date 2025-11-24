@@ -1,6 +1,6 @@
 import pygame
 from pygame.locals import *
-from classes import Player, Object, Station
+from classes import Player, Object, Station, Resource
 
 pygame.init()
 
@@ -138,21 +138,29 @@ ATTRIBUTES = {"containment_vault":{"volatile":["instability",
                                             "resonance"]
                                 }
             }
+
+OBJECT_TIMES = {1:1800, 2:1500, 3:1800, 4:2700, 5:2700}
+
 clock = pygame.time.Clock()
 
 player = Player("PlayerSideStillScaled.png", 90, 540, 5)
 background_image = pygame.image.load("working_bg.png").convert()
+world_stability = Resource("world_stability", 100, 0)
+sanity = Resource("sanity", 100, 230)
+time_distortion = Resource("time_distortion", 100, 370)
+resources = [world_stability, sanity, time_distortion]
+
 objects_one = [
     Object(
         "A Coffee Mug that Pours Upside-Down",
         "A coffee mug that defies gravity...",
         "ScaledCoffee.png",
         3,
-        ["synthetic", "gravititational_anomaly"],
+        ["synthetic", "biodegradable", "gravititational_anomaly"],
         analysis_data = {
             "polymer_type": "Inverted-ceramic blend",
-            "thermal_resistance": "Steam condenses upward",
-            "spatial_warp_degree": "mild inversion around the rim"
+            "moisture_content": "...Really high.",
+            "microgravity_field": "For some reason, only liquids inside the cup are affected."
         },
     ),
     Object(
@@ -160,13 +168,11 @@ objects_one = [
         "This derivative truly embraced the rainbow.",
         "Equation_Scaled.png",
         5,
-        [""],
+        ["bureaucratic", "linguistic", "spectral"],
         analysis_data={
-            "material": "Porcelain anomaly",
-            "density": "0.75g/mL",
-            "instability": 100,
-            "temperature": "Lukewarm",
-            "danger_level": "Low"
+            "hue_instability": "Appears to change color every time you look at it. You can't name the colors. You shouldn't try.",
+            "redundancy_index": "Infinity if you're not in STEM.",
+            "speaker_number": "Everyone in Calculus and Vectors - unfortunately."
         }
     )
 ]
@@ -176,8 +182,6 @@ conveyor = Station("conveyor.png", 0, 720, "conveyor")
 conveyor_origin = Station("Conveyor_origin.png", 0, 680, "conveyor_origin")
 
 objects = pygame.sprite.Group()
-for sprite in objects_one:
-    objects.add(sprite)
 
 stations = pygame.sprite.Group()
 stations.add(analyzer)
@@ -187,8 +191,11 @@ stations.add(conveyor)
 decorations = pygame.sprite.Group()
 
 analyzer_rends, analyzer_rects = [], []
-
+font = pygame.font.Font('freesansbold.ttf', 22)
+level = 1
 frame = 0
+objectNum = 0
+newObject = False
 running = True
 while running:
     for event in pygame.event.get(): 
@@ -200,12 +207,27 @@ while running:
 
     pressed_keys = pygame.key.get_pressed()
     player.update_pos(pressed_keys)
-    for object in objects_one:
-        object.update(frame)
-        if object.state == "analysis":
-            analyzer_pop_up, analyzer_rends, analyzer_rects = analyzer.analyze_object(object)
-            decorations.add(analyzer_pop_up)
-            object.state = "analysis_complete"
+    if level == 1:
+        if frame % OBJECT_TIMES[level] == 0 and not newObject:
+            if objectNum < len(objects_one):
+                objects.add(objects_one[objectNum])
+                objectNum += 1
+        for object in objects:
+            object.update(frame)
+            if object.state == "analysis":
+                crash = False
+                for other_obj in objects:
+                    if other_obj.state == "analysis_complete":
+                        crash = True
+                        if "volatile" in other_obj.tags + object.tags or "hazardous" in other_obj.tags + object.tags:
+                            world_stability.update(world_stability.current_amount - 10)
+                        else:
+                            sanity.update(sanity.current_amount - 5)
+                        object.state = "crashed"
+                if not crash:
+                    analyzer_pop_up, analyzer_rends, analyzer_rects = analyzer.analyze_object(object)
+                    decorations.add(analyzer_pop_up)
+                    object.state = "analysis_complete"
             
 
     # --- CAMERA LOGIC ---
@@ -232,7 +254,10 @@ while running:
             if frame % analyzer_pop_up.spd == 0:
                 rect.y += analyzer_pop_up.dir
             screen.blit(rend, (rect.x - camera_x, rect.y))
-
+    
+    for resource in resources:
+        rend, rect = resource.display(font)
+        screen.blit(rend, (rect.x, rect.y))
     
     screen.blit(player.image, (player.rect.x - camera_x, player.rect.y))
 
